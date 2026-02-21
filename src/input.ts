@@ -1,5 +1,13 @@
 import type { CandyBoxGame } from "./game";
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  const tag = target.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+}
+
 export function wireInput(canvas: HTMLCanvasElement, game: CandyBoxGame): void {
   const toCanvasCoords = (clientX: number, clientY: number) => {
     const rect = canvas.getBoundingClientRect();
@@ -15,6 +23,7 @@ export function wireInput(canvas: HTMLCanvasElement, game: CandyBoxGame): void {
 
   canvas.addEventListener("pointerdown", (event) => {
     const { x, y } = toCanvasCoords(event.clientX, event.clientY);
+    game.onPointerMove(x);
     game.onPointerDown(x, y);
   });
 
@@ -48,7 +57,16 @@ export function wireInput(canvas: HTMLCanvasElement, game: CandyBoxGame): void {
   );
 
   window.addEventListener("keydown", (event) => {
-    if (event.key === " " || event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Backspace") {
+    if (isEditableTarget(event.target)) {
+      return;
+    }
+
+    if (
+      event.key === " " ||
+      event.key === "ArrowLeft" ||
+      event.key === "ArrowRight" ||
+      event.key === "Backspace"
+    ) {
       event.preventDefault();
     }
     game.onKeyDown(event.key);

@@ -1,40 +1,98 @@
 import {
   BASE_CANDIES_PER_CLICK,
   BASE_CANDIES_PER_SECOND,
+  BASE_CATCHER_WIDTH,
+  BASE_MULTIPLIER,
   BONUS_FALL_SPEED,
   BONUS_SPAWN_INTERVAL_MS,
+  BONUS_WARNING_MS,
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
+  CANDY_BUTTON,
   CATCHER_HEIGHT,
-  CATCHER_WIDTH,
   CATCHER_Y,
+  COMMAND_COOLDOWN_MS,
+  COMMAND_FEEDBACK_MS,
+  MAX_MULTIPLIER,
   MAX_PENDING_EVENTS,
+  RUN_DURATION_MS,
+  START_BUTTON,
+  THEMES,
   UPGRADE_BUTTONS
 } from "./constants";
 import { makeRng, seedFromText, type RNG } from "./rng";
-import type { GameState, Rect, UpgradeSpec } from "./types";
+import type { BonusType, GamePhase, GameState, PendingEvent, Rect, UpgradeSpec } from "./types";
 
 function makeInitialState(seed: number): GameState {
   return {
     mode: "title",
+    phase: "boot",
     seed,
+    tick: 0,
     elapsedMs: 0,
+    timeLeftMs: RUN_DURATION_MS,
     score: 0,
     candies: 0,
     candiesPerSecond: BASE_CANDIES_PER_SECOND,
     candiesPerClick: BASE_CANDIES_PER_CLICK,
-    multiplier: 1,
+    multiplier: BASE_MULTIPLIER,
+    streak: 0,
+    heat: 0,
     spawnCooldownMs: BONUS_SPAWN_INTERVAL_MS,
+    nextSpawnMs: BONUS_SPAWN_INTERVAL_MS,
+    warningActive: false,
+    recoveryMs: 0,
     bonusTarget: {
       active: false,
       x: CANVAS_WIDTH * 0.5,
       y: -24,
       vy: BONUS_FALL_SPEED,
-      cycle: 0
+      cycle: 0,
+      type: "orange"
     },
     catcherX: CANVAS_WIDTH * 0.5,
+    catcherWidth: BASE_CATCHER_WIDTH,
+    theme: THEMES[0].id,
+    pausedReason: "",
+    bootTextMs: 0,
+    tutorialHint: "Catch falling bonuses to build streak. Miss = reset.",
     pendingEvents: [],
-    upgrades: UPGRADE_BUTTONS.map((u) => ({ id: u.id, purchased: false }))
+    upgrades: UPGRADE_BUTTONS.map((u) => ({ id: u.id, purchased: false })),
+    stats: {
+      clicks: 0,
+      catches: 0,
+      misses: 0,
+      bestStreak: 0
+    },
+    scoreBreakdown: {
+      manual: 0,
+      passive: 0,
+      bonus: 0,
+      command: 0
+    },
+    command: {
+      buffer: "",
+      lastSubmitted: "",
+      lastResult: "none",
+      feedbackMs: 0,
+      cooldownMs: {
+        boost: 0,
+        sync: 0,
+        dump: 0
+      },
+      used: {
+        boost: 0,
+        sync: 0,
+        dump: 0
+      }
+    },
+    fx: {
+      shakeMs: 0,
+      missFlashMs: 0,
+      catchFlashMs: 0,
+      purchaseFlashMs: 0,
+      screenJolt: 0
+    }
   };
 }
 
@@ -46,11 +104,34 @@ function rectContains(rect: Rect, x: number, y: number): boolean {
   return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
 }
 
-function pushEvent(state: GameState, label: string): void {
-  state.pendingEvents.push(label);
+function phaseForElapsed(elapsedMs: number): GamePhase {
+  if (elapsedMs < 10000) {
+    return "boot";
+  }
+  if (elapsedMs < 90000) {
+    return "core";
+  }
+  if (elapsedMs < RUN_DURATION_MS) {
+    return "shutdown";
+  }
+  return "shutdown";
+}
+
+function pushEvent(state: GameState, event: PendingEvent): void {
+  state.pendingEvents.push(event);
   if (state.pendingEvents.length > MAX_PENDING_EVENTS) {
     state.pendingEvents = state.pendingEvents.slice(-MAX_PENDING_EVENTS);
   }
+}
+
+function cycleBonusType(cycle: number, rng: RNG): BonusType {
+  if (cycle <= 2) {
+    return "orange";
+  }
+  const roll = Math.floor(rng.next() * 3);
+  if (roll === 0) return "orange";
+  if (roll === 1) return "blue";
+  return "red";
 }
 
 function spawnBonusTarget(state: GameState, rng: RNG): void {
@@ -62,34 +143,64 @@ function spawnBonusTarget(state: GameState, rng: RNG): void {
   if (cycle > 1) {
     x = 80 + rng.next() * (CANVAS_WIDTH - 160);
   }
+
   state.bonusTarget.active = true;
   state.bonusTarget.x = x;
   state.bonusTarget.y = -24;
   state.bonusTarget.vy = BONUS_FALL_SPEED;
   state.bonusTarget.cycle += 1;
-  pushEvent(state, `bonus_spawn_${state.bonusTarget.cycle}`);
+  state.bonusTarget.type = cycleBonusType(state.bonusTarget.cycle, rng);
+  state.spawnCooldownMs = BONUS_SPAWN_INTERVAL_MS;
+  state.nextSpawnMs = BONUS_SPAWN_INTERVAL_MS;
+  state.warningActive = false;
+
+  pushEvent(state, {
+    type: "bonus_spawn",
+    tick: state.tick,
+    data: {
+      cycle: state.bonusTarget.cycle,
+      bonusType: state.bonusTarget.type
+    }
+  });
 }
 
 function resolveCatch(state: GameState): void {
-  const catcherLeft = state.catcherX - CATCHER_WIDTH / 2;
-  const catcherRight = state.catcherX + CATCHER_WIDTH / 2;
+  const catcherLeft = state.catcherX - state.catcherWidth / 2;
+  const catcherRight = state.catcherX + state.catcherWidth / 2;
   const target = state.bonusTarget;
   const caught = target.x >= catcherLeft && target.x <= catcherRight;
 
   if (caught) {
-    state.multiplier = Math.min(5, Number((state.multiplier + 0.5).toFixed(2)));
+    state.multiplier = Math.min(MAX_MULTIPLIER, Number((state.multiplier + 0.5).toFixed(2)));
     const bonusPoints = Math.round(20 * state.multiplier);
     state.score += bonusPoints;
     state.candies += bonusPoints * 0.2;
-    pushEvent(state, `bonus_hit_x${state.multiplier.toFixed(1)}`);
+    state.scoreBreakdown.bonus += bonusPoints;
+    state.stats.catches += 1;
+    pushEvent(state, {
+      type: "bonus_hit",
+      tick: state.tick,
+      data: {
+        multi: Number(state.multiplier.toFixed(2)),
+        bonusType: target.type
+      }
+    });
   } else {
-    state.multiplier = 1;
-    pushEvent(state, "bonus_miss_reset");
+    state.multiplier = BASE_MULTIPLIER;
+    state.stats.misses += 1;
+    pushEvent(state, {
+      type: "bonus_miss_reset",
+      tick: state.tick,
+      data: {
+        bonusType: target.type
+      }
+    });
   }
 
   target.active = false;
   target.y = -24;
   state.spawnCooldownMs = BONUS_SPAWN_INTERVAL_MS;
+  state.nextSpawnMs = BONUS_SPAWN_INTERVAL_MS;
 }
 
 function purchaseUpgrade(state: GameState, upgrade: UpgradeSpec): void {
@@ -98,7 +209,13 @@ function purchaseUpgrade(state: GameState, upgrade: UpgradeSpec): void {
     return;
   }
   if (state.candies < upgrade.cost) {
-    pushEvent(state, `upgrade_blocked_${upgrade.id}`);
+    pushEvent(state, {
+      type: "upgrade_blocked",
+      tick: state.tick,
+      data: {
+        upgrade: upgrade.id
+      }
+    });
     return;
   }
 
@@ -106,7 +223,13 @@ function purchaseUpgrade(state: GameState, upgrade: UpgradeSpec): void {
   state.candiesPerSecond += upgrade.cps;
   state.candiesPerClick += upgrade.cpc;
   slot.purchased = true;
-  pushEvent(state, `upgrade_bought_${upgrade.id}`);
+  pushEvent(state, {
+    type: "upgrade_bought",
+    tick: state.tick,
+    data: {
+      upgrade: upgrade.id
+    }
+  });
 }
 
 export class CandyBoxGame {
@@ -123,24 +246,38 @@ export class CandyBoxGame {
   start(): void {
     if (this.state.mode === "title") {
       this.state.mode = "playing";
-      pushEvent(this.state, "run_started");
+      pushEvent(this.state, {
+        type: "run_started",
+        tick: this.state.tick
+      });
     }
   }
 
   reset(): void {
     this.state = makeInitialState(this.seed);
-    pushEvent(this.state, "run_reset");
+    pushEvent(this.state, {
+      type: "run_reset",
+      tick: this.state.tick
+    });
   }
 
   togglePause(): void {
     if (this.state.mode === "playing") {
       this.state.mode = "paused";
-      pushEvent(this.state, "paused");
+      this.state.pausedReason = "manual";
+      pushEvent(this.state, {
+        type: "paused",
+        tick: this.state.tick
+      });
       return;
     }
     if (this.state.mode === "paused") {
       this.state.mode = "playing";
-      pushEvent(this.state, "resumed");
+      this.state.pausedReason = "";
+      pushEvent(this.state, {
+        type: "resumed",
+        tick: this.state.tick
+      });
     }
   }
 
@@ -150,7 +287,7 @@ export class CandyBoxGame {
 
   onPointerDown(x: number, y: number): void {
     if (this.state.mode === "title") {
-      if (rectContains({ x: 320, y: 290, w: 320, h: 72 }, x, y)) {
+      if (rectContains(START_BUTTON, x, y)) {
         this.start();
       }
       return;
@@ -160,11 +297,20 @@ export class CandyBoxGame {
       return;
     }
 
-    if (rectContains({ x: 280, y: 420, w: 400, h: 140 }, x, y)) {
+    if (rectContains(CANDY_BUTTON, x, y)) {
       const gain = this.state.candiesPerClick * this.state.multiplier;
       this.state.candies += gain;
-      this.state.score += Math.round(gain * 10);
-      pushEvent(this.state, "manual_collect");
+      const points = Math.round(gain * 10);
+      this.state.score += points;
+      this.state.stats.clicks += 1;
+      this.state.scoreBreakdown.manual += points;
+      pushEvent(this.state, {
+        type: "manual_collect",
+        tick: this.state.tick,
+        data: {
+          gain: Number(gain.toFixed(2))
+        }
+      });
       return;
     }
 
@@ -191,30 +337,62 @@ export class CandyBoxGame {
       return;
     }
 
+    this.state.tick += 1;
     const dtSec = dtMs / 1000;
     this.state.elapsedMs += dtMs;
-    this.state.candies += this.state.candiesPerSecond * dtSec;
+    this.state.timeLeftMs = Math.max(0, RUN_DURATION_MS - this.state.elapsedMs);
+    this.state.phase = phaseForElapsed(this.state.elapsedMs);
+
+    for (const key of Object.keys(this.state.command.cooldownMs) as Array<keyof typeof COMMAND_COOLDOWN_MS>) {
+      this.state.command.cooldownMs[key] = Math.max(0, this.state.command.cooldownMs[key] - dtMs);
+    }
+    this.state.command.feedbackMs = Math.max(0, this.state.command.feedbackMs - dtMs);
+    if (this.state.command.feedbackMs === 0) {
+      this.state.command.lastResult = "none";
+    }
+
+    const passiveGain = this.state.candiesPerSecond * dtSec;
+    this.state.candies += passiveGain;
+    this.state.scoreBreakdown.passive += passiveGain;
 
     if (!this.state.bonusTarget.active) {
       this.state.spawnCooldownMs -= dtMs;
+      this.state.nextSpawnMs = Math.max(0, this.state.spawnCooldownMs);
+      this.state.warningActive = this.state.nextSpawnMs <= BONUS_WARNING_MS;
       if (this.state.spawnCooldownMs <= 0) {
         spawnBonusTarget(this.state, this.rng);
       }
     } else {
       this.state.bonusTarget.y += this.state.bonusTarget.vy * dtSec;
-      if (this.state.bonusTarget.y + 14 >= CATCHER_Y && this.state.bonusTarget.y - 14 <= CATCHER_Y + CATCHER_HEIGHT) {
+      if (
+        this.state.bonusTarget.y + 14 >= CATCHER_Y &&
+        this.state.bonusTarget.y - 14 <= CATCHER_Y + CATCHER_HEIGHT
+      ) {
         resolveCatch(this.state);
       } else if (this.state.bonusTarget.y > CANVAS_HEIGHT + 20) {
-        this.state.multiplier = 1;
+        this.state.multiplier = BASE_MULTIPLIER;
         this.state.bonusTarget.active = false;
         this.state.spawnCooldownMs = BONUS_SPAWN_INTERVAL_MS;
-        pushEvent(this.state, "bonus_miss_reset");
+        this.state.nextSpawnMs = BONUS_SPAWN_INTERVAL_MS;
+        this.state.warningActive = false;
+        this.state.stats.misses += 1;
+        pushEvent(this.state, {
+          type: "bonus_miss_reset",
+          tick: this.state.tick,
+          data: {
+            reason: "fell_out"
+          }
+        });
       }
     }
 
-    if (this.state.elapsedMs >= 120000) {
+    if (this.state.elapsedMs >= RUN_DURATION_MS) {
       this.state.mode = "game_over";
-      pushEvent(this.state, "game_over_time_cap");
+      this.state.timeLeftMs = 0;
+      pushEvent(this.state, {
+        type: "game_over_time_cap",
+        tick: this.state.tick
+      });
     }
   }
 
@@ -223,31 +401,65 @@ export class CandyBoxGame {
       ...this.state,
       bonusTarget: { ...this.state.bonusTarget },
       upgrades: this.state.upgrades.map((entry) => ({ ...entry })),
-      pendingEvents: [...this.state.pendingEvents]
+      pendingEvents: this.state.pendingEvents.map((entry) => ({ ...entry, data: entry.data ? { ...entry.data } : undefined })),
+      stats: { ...this.state.stats },
+      scoreBreakdown: { ...this.state.scoreBreakdown },
+      command: {
+        ...this.state.command,
+        cooldownMs: { ...this.state.command.cooldownMs },
+        used: { ...this.state.command.used }
+      },
+      fx: { ...this.state.fx }
     };
   }
 
   consumeSnapshot(): string {
     const payload = {
       mode: this.state.mode,
+      phase: this.state.phase,
       coordinateSystem: "origin at top-left, +x right, +y down",
       score: this.state.score,
       candies: Number(this.state.candies.toFixed(2)),
       candiesPerSecond: Number(this.state.candiesPerSecond.toFixed(2)),
       candiesPerClick: Number(this.state.candiesPerClick.toFixed(2)),
       multiplier: Number(this.state.multiplier.toFixed(2)),
+      streak: Number(this.state.streak.toFixed(2)),
+      heat: Number(this.state.heat.toFixed(3)),
+      recoveryMs: Math.round(this.state.recoveryMs),
+      warningActive: this.state.warningActive,
+      timeLeftMs: Math.round(this.state.timeLeftMs),
+      nextSpawnMs: Math.round(this.state.nextSpawnMs),
       bonusTarget: {
         active: this.state.bonusTarget.active,
         x: Number(this.state.bonusTarget.x.toFixed(2)),
         y: Number(this.state.bonusTarget.y.toFixed(2)),
         vy: Number(this.state.bonusTarget.vy.toFixed(2)),
-        cycle: this.state.bonusTarget.cycle
+        cycle: this.state.bonusTarget.cycle,
+        type: this.state.bonusTarget.type
       },
+      stats: { ...this.state.stats },
+      scoreBreakdown: {
+        manual: Number(this.state.scoreBreakdown.manual.toFixed(2)),
+        passive: Number(this.state.scoreBreakdown.passive.toFixed(2)),
+        bonus: Number(this.state.scoreBreakdown.bonus.toFixed(2)),
+        command: Number(this.state.scoreBreakdown.command.toFixed(2))
+      },
+      command: {
+        buffer: this.state.command.buffer,
+        lastSubmitted: this.state.command.lastSubmitted,
+        lastResult: this.state.command.lastResult,
+        cooldownMs: { ...this.state.command.cooldownMs }
+      },
+      theme: this.state.theme,
       seed: this.state.seed,
       elapsedMs: Math.round(this.state.elapsedMs),
-      pendingEvents: [...this.state.pendingEvents]
+      pendingEvents: this.state.pendingEvents.map((entry) => ({ ...entry, data: entry.data ? { ...entry.data } : undefined }))
     };
     this.state.pendingEvents = [];
     return JSON.stringify(payload);
+  }
+
+  getCommandFeedbackMs(): number {
+    return COMMAND_FEEDBACK_MS;
   }
 }

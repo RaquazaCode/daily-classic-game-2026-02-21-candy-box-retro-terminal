@@ -1,4 +1,4 @@
-import { CANVAS_HEIGHT, CANVAS_WIDTH, CANDY_BUTTON, CATCHER_HEIGHT, CATCHER_WIDTH, CATCHER_Y, START_BUTTON, TITLE_TEXT, UPGRADE_BUTTONS } from "./constants";
+import { CANVAS_HEIGHT, CANVAS_WIDTH, CANDY_BUTTON, CATCHER_HEIGHT, CATCHER_Y, START_BUTTON, TITLE_TEXT, UPGRADE_BUTTONS } from "./constants";
 import type { GameState } from "./types";
 
 function drawPanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
@@ -14,18 +14,25 @@ function drawUpgradeCard(ctx: CanvasRenderingContext2D, state: GameState): void 
   for (const upgrade of UPGRADE_BUTTONS) {
     const slot = state.upgrades.find((entry) => entry.id === upgrade.id);
     const purchased = Boolean(slot?.purchased);
-    ctx.fillStyle = purchased ? "#17391f" : "#0b1e12";
+    const canAfford = state.candies >= upgrade.cost;
+    ctx.fillStyle = purchased ? "#17391f" : canAfford ? "#0b1e12" : "#07150d";
     ctx.fillRect(upgrade.x, upgrade.y, upgrade.w, upgrade.h);
-    ctx.strokeStyle = purchased ? "#53ff9a" : "#1eff6b";
+    ctx.strokeStyle = purchased ? "#53ff9a" : canAfford ? "#1eff6b" : "#2b6a42";
     ctx.strokeRect(upgrade.x, upgrade.y, upgrade.w, upgrade.h);
-    ctx.fillStyle = purchased ? "#53ff9a" : "#d8ffd6";
+    ctx.fillStyle = purchased ? "#53ff9a" : canAfford ? "#d8ffd6" : "#8bb79a";
     ctx.fillText(upgrade.label, upgrade.x + 12, upgrade.y + 28);
     ctx.fillText(purchased ? "PURCHASED" : `Cost ${upgrade.cost} candy`, upgrade.x + 12, upgrade.y + 54);
     if (!purchased) {
       const effects = [];
       if (upgrade.cps > 0) effects.push(`+${upgrade.cps.toFixed(1)} cps`);
       if (upgrade.cpc > 0) effects.push(`+${upgrade.cpc.toFixed(1)} cpc`);
+      if (upgrade.id === "narrow_mode") effects.push("x2 bonus | narrow");
       ctx.fillText(effects.join(" | "), upgrade.x + 12, upgrade.y + 76);
+      if (!canAfford) {
+        const shortBy = Math.ceil(upgrade.cost - state.candies);
+        ctx.fillStyle = "#72bf8f";
+        ctx.fillText(`SHORT ${shortBy}`, upgrade.x + 150, upgrade.y + 54);
+      }
     }
   }
 }
@@ -70,7 +77,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
   ctx.fillText("COLLECT", CANDY_BUTTON.x + 132, CANDY_BUTTON.y + 78);
 
   ctx.fillStyle = "#1eff6b";
-  ctx.fillRect(state.catcherX - CATCHER_WIDTH / 2, CATCHER_Y, CATCHER_WIDTH, CATCHER_HEIGHT);
+  ctx.fillRect(state.catcherX - state.catcherWidth / 2, CATCHER_Y, state.catcherWidth, CATCHER_HEIGHT);
 
   if (state.bonusTarget.active) {
     ctx.fillStyle = "#ffa63d";

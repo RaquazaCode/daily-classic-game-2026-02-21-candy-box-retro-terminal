@@ -151,6 +151,10 @@ function cycleBonusType(cycle: number, rng: RNG): BonusType {
   return "red";
 }
 
+function isUpgradePurchased(state: GameState, upgradeId: string): boolean {
+  return Boolean(state.upgrades.find((entry) => entry.id === upgradeId)?.purchased);
+}
+
 function spawnBonusTarget(state: GameState, rng: RNG): void {
   const cycle = state.bonusTarget.cycle;
   let x = CANVAS_WIDTH * 0.5;
@@ -192,7 +196,8 @@ function resolveCatch(state: GameState): void {
     state.multiplier = Math.min(MAX_MULTIPLIER, Number((state.multiplier + STREAK_STEP).toFixed(2)));
     state.heat = Math.min(1, Number((state.heat + HEAT_ON_CATCH).toFixed(4)));
     state.stats.bestStreak = Math.max(state.stats.bestStreak, state.streak);
-    const bonusPoints = Math.round(20 * state.multiplier);
+    const narrowModeBoost = isUpgradePurchased(state, "narrow_mode") ? 2 : 1;
+    const bonusPoints = Math.round(20 * state.multiplier * narrowModeBoost);
     state.score += bonusPoints;
     state.candies += bonusPoints * 0.2;
     state.scoreBreakdown.bonus += bonusPoints;
@@ -261,6 +266,17 @@ function purchaseUpgrade(state: GameState, upgrade: UpgradeSpec): void {
   state.candiesPerSecond += upgrade.cps;
   state.candiesPerClick += upgrade.cpc;
   slot.purchased = true;
+  if (upgrade.catcherWidthScale) {
+    state.catcherWidth = Math.max(48, Math.round(BASE_CATCHER_WIDTH * upgrade.catcherWidthScale));
+    pushEvent(state, {
+      type: "risk_toggle",
+      tick: state.tick,
+      data: {
+        upgrade: upgrade.id,
+        catcherWidth: state.catcherWidth
+      }
+    });
+  }
   pushEvent(state, {
     type: "upgrade_bought",
     tick: state.tick,

@@ -286,6 +286,22 @@ function purchaseUpgrade(state: GameState, upgrade: UpgradeSpec): void {
   });
 }
 
+function runManualCollect(state: GameState): void {
+  const gain = state.candiesPerClick * state.multiplier;
+  state.candies += gain;
+  const points = Math.round(gain * 10);
+  state.score += points;
+  state.stats.clicks += 1;
+  state.scoreBreakdown.manual += points;
+  pushEvent(state, {
+    type: "manual_collect",
+    tick: state.tick,
+    data: {
+      gain: Number(gain.toFixed(2))
+    }
+  });
+}
+
 export class CandyBoxGame {
   private readonly seed: number;
   private readonly rng: RNG;
@@ -352,19 +368,7 @@ export class CandyBoxGame {
     }
 
     if (rectContains(CANDY_BUTTON, x, y)) {
-      const gain = this.state.candiesPerClick * this.state.multiplier;
-      this.state.candies += gain;
-      const points = Math.round(gain * 10);
-      this.state.score += points;
-      this.state.stats.clicks += 1;
-      this.state.scoreBreakdown.manual += points;
-      pushEvent(this.state, {
-        type: "manual_collect",
-        tick: this.state.tick,
-        data: {
-          gain: Number(gain.toFixed(2))
-        }
-      });
+      runManualCollect(this.state);
       return;
     }
 
@@ -383,6 +387,18 @@ export class CandyBoxGame {
     }
     if (normalized === "r") {
       this.reset();
+    }
+    if (this.state.mode !== "playing") {
+      return;
+    }
+    if (normalized === "arrowleft" || normalized === "a") {
+      this.state.catcherX = clamp(this.state.catcherX - 28, 80, CANVAS_WIDTH - 80);
+    }
+    if (normalized === "arrowright" || normalized === "d") {
+      this.state.catcherX = clamp(this.state.catcherX + 28, 80, CANVAS_WIDTH - 80);
+    }
+    if (normalized === " " || normalized === "space" || normalized === "spacebar") {
+      runManualCollect(this.state);
     }
   }
 

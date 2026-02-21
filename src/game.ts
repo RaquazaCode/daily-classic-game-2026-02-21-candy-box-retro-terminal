@@ -201,6 +201,8 @@ function handleMissPenalty(state: GameState, reason: string, bonusType: BonusTyp
   state.multiplier = BASE_MULTIPLIER;
   state.streak = 0;
   state.recoveryMs = MISS_RECOVERY_MS;
+  state.fx.missFlashMs = 180;
+  state.fx.shakeMs = 120;
   state.stats.misses += 1;
   pushEvent(state, {
     type: "bonus_miss_reset",
@@ -226,6 +228,8 @@ function resolveCatch(state: GameState): void {
     state.candies += bonusPoints * 0.2;
     state.scoreBreakdown.bonus += bonusPoints;
     state.stats.catches += 1;
+    state.fx.catchFlashMs = 110;
+    state.fx.shakeMs = Math.max(state.fx.shakeMs, 90);
     pushEvent(state, {
       type: "bonus_hit",
       tick: state.tick,
@@ -291,6 +295,7 @@ function purchaseUpgrade(state: GameState, upgrade: UpgradeSpec): void {
       }
     });
   }
+  state.fx.purchaseFlashMs = 180;
   pushEvent(state, {
     type: "upgrade_bought",
     tick: state.tick,
@@ -523,6 +528,10 @@ export class CandyBoxGame {
       this.state.command.lastResult = "none";
     }
     this.state.commandBoostMs = Math.max(0, this.state.commandBoostMs - dtMs);
+    this.state.fx.shakeMs = Math.max(0, this.state.fx.shakeMs - dtMs);
+    this.state.fx.catchFlashMs = Math.max(0, this.state.fx.catchFlashMs - dtMs);
+    this.state.fx.missFlashMs = Math.max(0, this.state.fx.missFlashMs - dtMs);
+    this.state.fx.purchaseFlashMs = Math.max(0, this.state.fx.purchaseFlashMs - dtMs);
 
     if (!this.state.bonusTarget.active) {
       this.state.spawnCooldownMs -= dtMs;

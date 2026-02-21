@@ -108,7 +108,31 @@ function drawBootSequence(ctx: CanvasRenderingContext2D, state: GameState): void
   ctx.fillText("Press ENTER or START RUN", 280, 430);
 }
 
+function drawCrtOverlay(ctx: CanvasRenderingContext2D, state: GameState): void {
+  for (let y = 0; y < CANVAS_HEIGHT; y += 4) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.14)";
+    ctx.fillRect(0, y, CANVAS_WIDTH, 1);
+  }
+
+  const flicker = 0.96 + (Math.sin((state.elapsedMs + state.seed) * 0.018) * 0.5 + 0.5) * 0.05;
+  ctx.fillStyle = `rgba(0, 24, 8, ${(1 - flicker).toFixed(3)})`;
+  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+  ctx.fillStyle = "rgba(0, 255, 120, 0.03)";
+  for (let i = 0; i < 160; i += 1) {
+    const x = (i * 57 + state.tick * 11 + state.seed) % CANVAS_WIDTH;
+    const y = (i * 29 + state.tick * 7 + state.seed) % CANVAS_HEIGHT;
+    ctx.fillRect(x, y, 2, 2);
+  }
+}
+
 export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): void {
+  const shakeMagnitude = state.fx.shakeMs > 0 ? Math.min(5, 1 + state.fx.shakeMs / 40) : 0;
+  const shakeX = shakeMagnitude > 0 ? Math.sin(state.elapsedMs * 0.3) * shakeMagnitude : 0;
+  const shakeY = shakeMagnitude > 0 ? Math.cos(state.elapsedMs * 0.27) * shakeMagnitude : 0;
+  ctx.save();
+  ctx.translate(shakeX, shakeY);
+
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   ctx.fillStyle = "#020905";
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -130,7 +154,10 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
 
   ctx.fillStyle = "#a8ffb0";
   ctx.font = "24px monospace";
+  ctx.shadowColor = "rgba(0, 255, 140, 0.45)";
+  ctx.shadowBlur = 4;
   ctx.fillText(TITLE_TEXT, 30, 44);
+  ctx.shadowBlur = 0;
 
   ctx.font = "20px monospace";
   ctx.fillStyle = "#d8ffd6";
@@ -180,6 +207,21 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
     ctx.stroke();
   }
 
+  if (state.fx.catchFlashMs > 0) {
+    const burstCount = 12;
+    for (let i = 0; i < burstCount; i += 1) {
+      const angle = (Math.PI * 2 * i) / burstCount;
+      const radius = 12 + (state.fx.catchFlashMs / 110) * 24;
+      ctx.fillStyle = "rgba(48, 255, 164, 0.65)";
+      ctx.fillRect(
+        state.catcherX + Math.cos(angle) * radius,
+        CATCHER_Y - 20 + Math.sin(angle) * radius,
+        3,
+        3
+      );
+    }
+  }
+
   drawUpgradeCard(ctx, state);
   drawCommandPanel(ctx, state);
 
@@ -216,4 +258,18 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
     ctx.fillRect(0, 0, CANVAS_WIDTH, 8);
     ctx.fillRect(0, CANVAS_HEIGHT - 8, CANVAS_WIDTH, 8);
   }
+
+  if (state.fx.purchaseFlashMs > 0) {
+    const alpha = Math.min(0.25, state.fx.purchaseFlashMs / 720);
+    ctx.fillStyle = `rgba(0, 255, 120, ${alpha.toFixed(3)})`;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  }
+  if (state.fx.missFlashMs > 0) {
+    const alpha = Math.min(0.35, state.fx.missFlashMs / 520);
+    ctx.fillStyle = `rgba(255, 40, 40, ${alpha.toFixed(3)})`;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  }
+
+  drawCrtOverlay(ctx, state);
+  ctx.restore();
 }

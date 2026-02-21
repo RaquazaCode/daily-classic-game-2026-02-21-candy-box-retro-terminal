@@ -1,18 +1,29 @@
-Original prompt: Implement the 2026-02-21 Daily Classic Game Reliability + Today Run Plan.
+Original prompt: Implement Candy Box Retro Terminal v2.0 major update plan with micro logical commits.
 
 ## Progress
-- Created new daily folder scaffold at `games/2026-02-21-candy-box-retro-terminal`.
-- Implemented deterministic Candy Box MVP with retro terminal visuals.
-- Added fixed-step loop, seeded RNG, manual collect, passive generation, upgrades, and bonus catch/miss collision logic.
-- Exposed automation hooks `window.advanceTime(ms)` and `window.render_game_to_text()`.
-- Added self-check and Playwright capture scripts with scripted action payload.
-- Verified gameplay loop via scripted capture and generated GIF clips from latest screenshots.
-- Published standalone repo and merged feature PR:
-- Repo: `https://github.com/RaquazaCode/daily-classic-game-2026-02-21-candy-box-retro-terminal`
-- PR: `https://github.com/RaquazaCode/daily-classic-game-2026-02-21-candy-box-retro-terminal/pull/1`
-- Merge commit: `6cde99e57a240ceafb3740245f6f25bf9fc183d5`
-- Ran post-run hardening (auto -> solo_fast_lane) and verified branch protection.
+- Created feature branch: `codex/2026-02-21-candy-box-v2-major-update`.
+- Opened draft PR: `https://github.com/RaquazaCode/daily-classic-game-2026-02-21-candy-box-retro-terminal/pull/3`.
+- Implemented deterministic v2 systems:
+- phase timeline (`boot/core/overclock/shutdown`) with 120s cap
+- streak + heat + miss recovery mechanics
+- deterministic orange/blue/red bonus variants and effects
+- narrow-mode risk upgrade with affordability rendering
+- keyboard/touch controls and manual collect hotkeys
+- command buffer with `BOOST`, `SYNC`, `DUMP`
+- onboarding boot sequence and contextual tutorial hints
+- expanded HUD with timer, spawn ETA, streak/heat, urgency pulse
+- CRT effects, scanlines/noise/flicker, shake/flash feedback
+- theme variants and deterministic theme toggles
+- end-screen diagnostic report and mission suggestion
+- Updated verification harness and artifacts:
+- refreshed `scripts/self_check.mjs`
+- updated `playwright_actions.json`
+- regenerated `playwright/main-actions/state-*.json` and screenshots
 
-## Outstanding
-- No blockers for this run.
-- Optional follow-up: add audio loop + keyboard upgrade shortcuts from backlog.
+## Verification
+- `pnpm test` (pass)
+- `pnpm build` (pass)
+- `WEB_GAME_URL="http://127.0.0.1:4173/?scripted_demo=1" node scripts/capture_playwright.mjs` (pass)
+
+## Remaining
+- Mark PR ready, merge with merge commit, sync local `main`.

@@ -1,37 +1,32 @@
-# Candy Box Retro Terminal - Design
+# Candy Box Retro Terminal - V2 Design
 
 ## Goal
-Deliver an unattended-safe Candy Box inspired idle clicker with deterministic simulation and collision-based bonus catch mechanic.
+Evolve the daily run from deterministic MVP into a full retro-terminal arcade loop while keeping deterministic automation hooks intact.
 
 ## Architecture
-- `src/game.ts` is simulation authority and state machine.
-- `src/render.ts` draws retro terminal visuals on a single canvas.
-- `src/input.ts` maps pointer/keyboard controls to deterministic actions.
-- `src/main.ts` exposes browser hooks and fixed-step loop.
+- `src/game.ts`: deterministic simulation authority and event producer.
+- `src/render.ts`: single-canvas renderer with HUD/CRT/feedback layers.
+- `src/input.ts`: pointer/touch/keyboard command routing.
+- `src/main.ts`: fixed-step loop and browser hooks.
 
-## Determinism
-- Seeded RNG from stable run slug.
-- Fixed 60 Hz simulation stepping.
-- Controlled bonus spawn cycle:
-- first cycle guaranteed central hit lane.
-- second cycle offset to guarantee miss when catcher is moved left in scripted demo.
+## Determinism Rules
+- Seeded RNG only (`src/rng.ts`), no `Math.random` in gameplay.
+- Fixed 60Hz sim step for all timers and movement.
+- Spawn cycle and bonus type selection are seed-driven and replay-stable.
+- Visual overlays derive from state/tick and do not mutate simulation.
 
-## Mechanics
-- Manual collection button increases candy and score.
-- Passive generation via `candiesPerSecond`.
-- Upgrade cards increase cps/cpc.
-- Falling bonus candy + catcher collision modifies multiplier.
-- Miss resets multiplier.
+## Core Systems
+- Phases: `boot` -> `core` -> `overclock` -> `shutdown` (120s cap).
+- Risk loop: streak + heat growth on catches, miss recovery debuff.
+- Bonus variants: orange / blue / red with deterministic effects.
+- Commands: `BOOST`, `SYNC`, `DUMP` with deterministic cooldown timers.
+- Upgrades: affordability states + risk upgrade (`narrow_mode`).
+- End screen: diagnostic report with score-source table and replay mission.
 
 ## Hook Contract
-`window.render_game_to_text()` JSON keys:
-- `mode`
-- `score`
-- `candies`
-- `candiesPerSecond`
-- `candiesPerClick`
-- `multiplier`
-- `bonusTarget`
-- `seed`
-- `elapsedMs`
-- `pendingEvents`
+`window.render_game_to_text()` returns JSON with keys:
+- `mode`, `phase`, `coordinateSystem`, `score`, `candies`
+- `candiesPerSecond`, `candiesPerClick`, `multiplier`, `streak`, `heat`
+- `recoveryMs`, `blueSlowMs`, `redBoostMs`, `commandBoostMs`, `syncShield`
+- `warningActive`, `timeLeftMs`, `nextSpawnMs`, `bonusTarget`
+- `stats`, `scoreBreakdown`, `command`, `theme`, `seed`, `elapsedMs`, `pendingEvents`

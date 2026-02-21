@@ -1,7 +1,7 @@
 :root {
   color: #c8ffd0;
   background-color: #010a04;
-  font-family: Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: "VT323", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
 * {
@@ -20,6 +20,10 @@ body {
   display: grid;
   place-items: center;
   overflow: hidden;
+  background-image:
+    radial-gradient(circle at 20% 15%, rgba(0, 255, 110, 0.08), transparent 45%),
+    radial-gradient(circle at 80% 85%, rgba(0, 200, 255, 0.06), transparent 50%),
+    radial-gradient(circle at center, #082312 0%, #010804 55%, #000000 100%);
 }
 
 canvas {
@@ -28,4 +32,5 @@ canvas {
   border: 2px solid #1eff6b;
   box-shadow: 0 0 24px rgba(30, 255, 107, 0.3);
   image-rendering: pixelated;
+  filter: contrast(1.18) brightness(1.08);
 }

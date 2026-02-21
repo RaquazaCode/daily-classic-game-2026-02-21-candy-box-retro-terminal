@@ -1,28 +1,6 @@
 # daily-classic-game-2026-02-21-candy-box-retro-terminal
 
-<p align="center">
-  <strong>Retro-terminal Candy Box idle clicker with deterministic bonus catch collisions.</strong>
-</p>
-
-<p align="center">
-  <img alt="Candy Box gameplay" src="playwright/main-actions/shot-4.png" width="920" />
-</p>
-
-## GIF Captures
-### Start and First Collection
-<p align="center">
-  <img alt="Start and first collection" src="assets/gifs/start-and-collect.gif" width="900" />
-</p>
-
-### Bonus Hit Cycle
-<p align="center">
-  <img alt="Bonus hit cycle" src="assets/gifs/bonus-hit-cycle.gif" width="900" />
-</p>
-
-### Bonus Miss Reset
-<p align="center">
-  <img alt="Bonus miss reset" src="assets/gifs/bonus-miss-reset.gif" width="900" />
-</p>
+Retro terminal clicker run with deterministic 120s phases, streak/heat risk loop, bonus variants, command console, and diagnostics end screen.
 
 ## Quick Start
 ```bash
@@ -32,32 +10,37 @@ pnpm test
 pnpm build
 ```
 
-## How To Play
-- Click `START RUN`.
-- Click the `COLLECT` button to gain candy and score.
-- Move the mouse horizontally to position the catcher bar.
-- Catch orange bonus candy to increase multiplier.
-- Buy upgrades from the right panel to improve `cps` and `cpc`.
-- Controls:
-- `P`: pause/resume.
+## Controls
+- Mouse/touch drag or `ArrowLeft`/`ArrowRight`/`A`/`D`: move catcher.
+- Click `COLLECT` or press `Space`: manual collect.
+- Type commands then press `Enter`: `BOOST`, `SYNC`, `DUMP`.
+- `1`/`2`/`3`: theme toggle (Classic Green / Amber / Blue Vector).
+- `P`: pause.
 - `R`: reset run.
 
-## Rules
-- Passive candy is generated continuously using `candiesPerSecond`.
-- Bonus candy spawns on a deterministic cycle and falls toward the catcher lane.
-- Catching a bonus increases multiplier and grants score.
-- Missing a bonus resets multiplier to `x1.00`.
-- Session ends at 120 seconds elapsed.
+## Run Flow
+- `0-10s` boot phase with onboarding hints.
+- `10-60s` core phase.
+- `60-90s` overclock phase.
+- `90-120s` shutdown phase with urgency pulse.
 
-## Scoring
-- Manual collection: `candiesPerClick * multiplier` converted to score.
-- Bonus catch grants immediate score and candy boost.
-- Multiplier increases by `+0.5` per catch up to `x5.0`.
-- Miss resets multiplier.
+## Deterministic Mechanics
+- Fixed-step loop (`60Hz`) and seeded RNG.
+- Bonus variants:
+- Orange: standard multiplier progression.
+- Blue: temporary slow-fall safety window.
+- Red: temporary CPS boost.
+- Miss handling includes recovery debuff; `SYNC` shield can absorb a miss.
 
-## Twist
-- `retro terminal colors` applied across HUD, panels, and grid styling.
-- High-contrast green-on-black visuals with amber bonus candy callouts.
+## Browser Hooks
+- `window.advanceTime(ms)`
+- `window.render_game_to_text()`
+
+Snapshot payload includes:
+- `mode`, `phase`, `score`, `candies`, `candiesPerSecond`, `candiesPerClick`
+- `multiplier`, `streak`, `heat`, `recoveryMs`, `warningActive`
+- `timeLeftMs`, `nextSpawnMs`, `bonusTarget.type`
+- `stats`, `scoreBreakdown`, `command`, `theme`, `pendingEvents`
 
 ## Verification
 ```bash
@@ -66,30 +49,7 @@ pnpm build
 WEB_GAME_URL="http://127.0.0.1:4173/?scripted_demo=1" node scripts/capture_playwright.mjs
 ```
 
-Deterministic artifacts:
-- `playwright/main-actions/state-2.json` shows passive growth and first bonus hit event.
-- `playwright/main-actions/state-4.json` shows miss cycle and multiplier reset.
-
-Browser hooks:
-- `window.advanceTime(ms)`
-- `window.render_game_to_text()`
-
-## Project Layout
-```text
-src/
-  constants.ts
-  types.ts
-  rng.ts
-  game.ts
-  input.ts
-  render.ts
-  main.ts
-scripts/
-  self_check.mjs
-  capture_playwright.mjs
-playwright/
-  main-actions/
-assets/
-  gifs/
-docs/plans/
-```
+Evidence highlights:
+- `playwright/main-actions/state-2.json`: passive growth + `bonus_hit`.
+- `playwright/main-actions/state-5.json`: `command_success` + `bonus_miss_reset`.
+- `playwright/main-actions/state-7.json`: deterministic blue bonus spawn.

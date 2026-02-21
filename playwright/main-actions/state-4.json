@@ -1,0 +1,1 @@
+{"mode":"playing","coordinateSystem":"origin at top-left, +x right, +y down","score":40,"candies":14.82,"candiesPerSecond":0.4,"candiesPerClick":1,"multiplier":1,"bonusTarget":{"active":true,"x":868.46,"y":326,"vy":140,"cycle":3},"seed":1274872030,"elapsedMs":19550,"pendingEvents":["bonus_miss_reset","bonus_spawn_3"]}

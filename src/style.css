@@ -1,0 +1,31 @@
+:root {
+  color: #c8ffd0;
+  background-color: #010a04;
+  font-family: Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at top, #082312 0%, #010804 60%, #000000 100%);
+}
+
+body {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+canvas {
+  width: min(95vw, 960px);
+  height: auto;
+  border: 2px solid #1eff6b;
+  box-shadow: 0 0 24px rgba(30, 255, 107, 0.3);
+  image-rendering: pixelated;
+}

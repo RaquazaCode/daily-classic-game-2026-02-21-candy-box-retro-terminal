@@ -1,0 +1,1 @@
+{"mode":"playing","coordinateSystem":"origin at top-left, +x right, +y down","score":40,"candies":11.25,"candiesPerSecond":0.4,"candiesPerClick":1,"multiplier":1.5,"bonusTarget":{"active":true,"x":806.4,"y":60,"vy":140,"cycle":2},"seed":1274872030,"elapsedMs":10633,"pendingEvents":["upgrade_blocked_sugar_rush"]}

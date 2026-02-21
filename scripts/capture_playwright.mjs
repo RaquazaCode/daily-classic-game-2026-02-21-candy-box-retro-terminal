@@ -66,7 +66,7 @@ async function run() {
         await page.mouse.down();
         await page.mouse.up();
       } else {
-        await page.keyboard.press(String(button).toUpperCase());
+        await page.keyboard.press(String(button));
       }
     }
 

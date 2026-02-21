@@ -19,8 +19,11 @@ assert(mainSource.includes("window.render_game_to_text"), "window.render_game_to
 assert(mainSource.includes("scripted_demo"), "scripted demo mode missing");
 assert(gameSource.includes("bonus_miss_reset"), "bonus miss path missing");
 assert(gameSource.includes("bonus_hit"), "bonus hit path missing");
+assert(gameSource.includes("command_success"), "command success path missing");
+assert(gameSource.includes("theme_change"), "theme toggle path missing");
 assert(gameSource.includes("candiesPerSecond"), "passive generation state missing");
 assert(renderSource.includes("COLLECT"), "collect button rendering missing");
+assert(renderSource.includes("BOOTING CANDY OS v2.0"), "boot screen rendering missing");
 assert(Array.isArray(actions.steps) && actions.steps.length >= 4, "playwright steps missing");
 
-console.log("Self-check passed: candy-box deterministic hooks and bonus collision paths are present.");
+console.log("Self-check passed: candy-box deterministic hooks, command paths, and v2 visuals are present.");

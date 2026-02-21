@@ -3,7 +3,12 @@ import {
   BASE_CANDIES_PER_SECOND,
   BASE_CATCHER_WIDTH,
   BASE_MULTIPLIER,
+  BONUS_BLUE_SLOW_MS,
+  BONUS_BLUE_SLOW_MULT,
   BONUS_FALL_SPEED,
+  BONUS_HEAT_SPEEDUP,
+  BONUS_RED_BOOST_MS,
+  BONUS_RED_CPS_MULT,
   BONUS_SPAWN_INTERVAL_MS,
   BONUS_WARNING_MS,
   CANVAS_HEIGHT,
@@ -49,6 +54,8 @@ function makeInitialState(seed: number): GameState {
     nextSpawnMs: BONUS_SPAWN_INTERVAL_MS,
     warningActive: false,
     recoveryMs: 0,
+    blueSlowMs: 0,
+    redBoostMs: 0,
     bonusTarget: {
       active: false,
       x: CANVAS_WIDTH * 0.5,
@@ -198,6 +205,22 @@ function resolveCatch(state: GameState): void {
         bonusType: target.type
       }
     });
+    if (target.type === "blue") {
+      state.blueSlowMs = BONUS_BLUE_SLOW_MS;
+      pushEvent(state, {
+        type: "bonus_effect_blue",
+        tick: state.tick,
+        data: { ms: BONUS_BLUE_SLOW_MS }
+      });
+    }
+    if (target.type === "red") {
+      state.redBoostMs = BONUS_RED_BOOST_MS;
+      pushEvent(state, {
+        type: "bonus_effect_red",
+        tick: state.tick,
+        data: { ms: BONUS_RED_BOOST_MS }
+      });
+    }
   } else {
     state.multiplier = BASE_MULTIPLIER;
     state.streak = 0;
@@ -374,7 +397,14 @@ export class CandyBoxGame {
         spawnBonusTarget(this.state, this.rng);
       }
     } else {
-      this.state.bonusTarget.y += this.state.bonusTarget.vy * dtSec;
+      let fallSpeed = this.state.bonusTarget.vy * (1 + this.state.heat * BONUS_HEAT_SPEEDUP);
+      if (this.state.phase === "overclock" || this.state.phase === "shutdown") {
+        fallSpeed *= 1.15;
+      }
+      if (this.state.blueSlowMs > 0) {
+        fallSpeed *= BONUS_BLUE_SLOW_MULT;
+      }
+      this.state.bonusTarget.y += fallSpeed * dtSec;
       if (
         this.state.bonusTarget.y + 14 >= CATCHER_Y &&
         this.state.bonusTarget.y - 14 <= CATCHER_Y + CATCHER_HEIGHT
@@ -401,6 +431,8 @@ export class CandyBoxGame {
 
     this.state.heat = Math.max(0, Number((this.state.heat - HEAT_DECAY_PER_SEC * dtSec).toFixed(4)));
     this.state.recoveryMs = Math.max(0, this.state.recoveryMs - dtMs);
+    this.state.blueSlowMs = Math.max(0, this.state.blueSlowMs - dtMs);
+    this.state.redBoostMs = Math.max(0, this.state.redBoostMs - dtMs);
 
     let cpsMult = 1;
     if (this.state.recoveryMs > 0) {
@@ -408,6 +440,9 @@ export class CandyBoxGame {
     }
     if (this.state.heat >= HEAT_MODE_THRESHOLD) {
       cpsMult *= HEAT_MODE_CPS_MULT;
+    }
+    if (this.state.redBoostMs > 0) {
+      cpsMult *= BONUS_RED_CPS_MULT;
     }
     const effectiveCps = this.state.candiesPerSecond * cpsMult;
     const passiveGain = effectiveCps * dtSec;
@@ -454,6 +489,8 @@ export class CandyBoxGame {
       streak: Number(this.state.streak.toFixed(2)),
       heat: Number(this.state.heat.toFixed(3)),
       recoveryMs: Math.round(this.state.recoveryMs),
+      blueSlowMs: Math.round(this.state.blueSlowMs),
+      redBoostMs: Math.round(this.state.redBoostMs),
       warningActive: this.state.warningActive,
       timeLeftMs: Math.round(this.state.timeLeftMs),
       nextSpawnMs: Math.round(this.state.nextSpawnMs),

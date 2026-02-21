@@ -18,6 +18,10 @@ export const BONUS_SPAWN_INTERVAL_MS = 3000;
 export const BONUS_WARNING_MS = 1000;
 export const BONUS_FALL_SPEED = 140;
 export const BONUS_HEAT_SPEEDUP = 0.4;
+export const BONUS_BLUE_SLOW_MS = 5000;
+export const BONUS_BLUE_SLOW_MULT = 0.65;
+export const BONUS_RED_BOOST_MS = 10000;
+export const BONUS_RED_CPS_MULT = 1.8;
 
 export const BASE_CATCHER_WIDTH = 140;
 export const CATCHER_WIDTH = BASE_CATCHER_WIDTH;

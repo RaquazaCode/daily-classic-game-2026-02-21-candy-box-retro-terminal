@@ -250,11 +250,30 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
   } else if (state.mode === "game_over") {
     ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    ctx.fillStyle = "#d8ffd6";
+    drawPanel(ctx, 150, 90, 660, 440, theme);
+    ctx.fillStyle = theme.dim;
     ctx.font = "34px monospace";
-    ctx.fillText("SESSION COMPLETE", 295, 310);
-    ctx.font = "22px monospace";
-    ctx.fillText("Press R to restart", 370, 350);
+    ctx.fillText("TERMINAL SHUTDOWN", 250, 140);
+    ctx.font = "18px monospace";
+    ctx.fillText(`TOTAL CANDIES    ${state.candies.toFixed(1)}`, 210, 190);
+    ctx.fillText(`CLICKS           ${state.stats.clicks}`, 210, 222);
+    ctx.fillText(`CATCHES / MISSES ${state.stats.catches} / ${state.stats.misses}`, 210, 254);
+    ctx.fillText(`BEST STREAK      ${state.stats.bestStreak.toFixed(1)}`, 210, 286);
+    ctx.fillText(`UPGRADES BOUGHT  ${state.upgrades.filter((u) => u.purchased).length}`, 210, 318);
+    ctx.fillText(`SCORE MANUAL     ${Math.round(state.scoreBreakdown.manual)}`, 210, 350);
+    ctx.fillText(`SCORE PASSIVE    ${Math.round(state.scoreBreakdown.passive)}`, 210, 382);
+    ctx.fillText(`SCORE BONUS      ${Math.round(state.scoreBreakdown.bonus)}`, 210, 414);
+    ctx.fillText(`SCORE COMMAND    ${Math.round(state.scoreBreakdown.command)}`, 210, 446);
+    const mission =
+      state.score < 5000
+        ? "MISSION: Beat 5000 score - try Sugar Rush first."
+        : state.stats.bestStreak < 10
+          ? "MISSION: Reach streak 10 with fewer misses."
+          : "MISSION: Maximize shutdown DUMP timing.";
+    ctx.fillStyle = theme.bright;
+    ctx.fillText(mission, 210, 480);
+    ctx.fillStyle = theme.dim;
+    ctx.fillText("Press R to restart run", 360, 510);
   }
 
   if (state.timeLeftMs <= 30000 && state.mode === "playing") {

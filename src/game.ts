@@ -599,9 +599,20 @@ export class CandyBoxGame {
     if (this.state.elapsedMs >= RUN_DURATION_MS) {
       this.state.mode = "game_over";
       this.state.timeLeftMs = 0;
+      this.state.tutorialHint = "TERMINAL SHUTDOWN - review diagnostics and restart.";
       pushEvent(this.state, {
         type: "game_over_time_cap",
         tick: this.state.tick
+      });
+      pushEvent(this.state, {
+        type: "run_summary",
+        tick: this.state.tick,
+        data: {
+          score: this.state.score,
+          catches: this.state.stats.catches,
+          misses: this.state.stats.misses,
+          bestStreak: this.state.stats.bestStreak
+        }
       });
     }
   }

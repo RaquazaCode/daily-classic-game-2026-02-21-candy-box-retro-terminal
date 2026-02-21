@@ -6,13 +6,28 @@ export type BonusType = "orange" | "blue" | "red";
 
 export type ThemeId = "classic_green" | "amber" | "blue_vector";
 
+export type DifficultyId = "easy" | "medium" | "hard";
+
 export type CommandId = "boost" | "sync" | "dump";
+
+export type PrestigeUpgradeId =
+  | "manual_core"
+  | "passive_core"
+  | "catcher_rails"
+  | "heat_sink"
+  | "recovery_patch"
+  | "command_bus";
 
 export interface Rect {
   x: number;
   y: number;
   w: number;
   h: number;
+}
+
+export interface UiPanelsOpen {
+  left: boolean;
+  right: boolean;
 }
 
 export interface BonusTarget {
@@ -57,7 +72,6 @@ export interface FxState {
   missFlashMs: number;
   catchFlashMs: number;
   purchaseFlashMs: number;
-  screenJolt: number;
 }
 
 export interface PendingEvent {
@@ -66,9 +80,40 @@ export interface PendingEvent {
   data?: Record<string, number | string | boolean | null>;
 }
 
+export interface DifficultyProfile {
+  id: DifficultyId;
+  label: string;
+  runDurationMs: number;
+  spawnIntervalMs: number;
+  bonusFallSpeed: number;
+  missRecoveryMs: number;
+  upgradeCostMult: number;
+  baseRateMult: number;
+  chipMult: number;
+}
+
+export type PrestigeUpgradeState = Record<PrestigeUpgradeId, number>;
+
+export interface MetaState {
+  version: number;
+  chips: number;
+  lifetimeChips: number;
+  upgrades: PrestigeUpgradeState;
+}
+
+export interface PrestigeUpgradeSpec {
+  id: PrestigeUpgradeId;
+  label: string;
+  description: string;
+  maxRank: number;
+  costs: number[];
+}
+
 export interface GameState {
   mode: GameMode;
   phase: GamePhase;
+  difficulty: DifficultyId;
+  runDurationMs: number;
   seed: number;
   tick: number;
   elapsedMs: number;
@@ -101,16 +146,16 @@ export interface GameState {
   scoreBreakdown: ScoreBreakdown;
   command: CommandState;
   fx: FxState;
+  chipsEarnedThisRun: number;
+  playfieldRect: Rect;
+  uiPanelsOpen: UiPanelsOpen;
+  meta: MetaState;
 }
 
 export interface UpgradeSpec {
   id: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
   label: string;
-  cost: number;
+  baseCost: number;
   cps: number;
   cpc: number;
   bonusValueMult?: number;
@@ -127,4 +172,30 @@ export interface ThemeSpec {
   panel: string;
   alert: string;
   accent: string;
+}
+
+export interface GameConstructorOptions {
+  difficulty?: DifficultyId;
+  meta?: MetaState;
+  metaMode?: "enabled" | "disabled";
+}
+
+export interface UpgradeCostInfo {
+  id: string;
+  label: string;
+  cost: number;
+  purchased: boolean;
+  canAfford: boolean;
+  shortBy: number;
+  effects: string[];
+}
+
+export interface MetaUpgradeInfo {
+  id: PrestigeUpgradeId;
+  label: string;
+  rank: number;
+  maxRank: number;
+  nextCost: number | null;
+  description: string;
+  canAfford: boolean;
 }

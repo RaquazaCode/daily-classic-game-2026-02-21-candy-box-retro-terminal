@@ -31,6 +31,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 const params = new URLSearchParams(window.location.search);
 const scriptedDemo = params.get("scripted_demo") === "1";
 const resetMetaFromUrl = params.get("meta_reset") === "1";
+const scriptedRealtime = params.get("scripted_realtime") === "1";
 const metaMode = scriptedDemo ? "disabled" : "enabled";
 
 if (resetMetaFromUrl) {
@@ -380,4 +381,7 @@ renderLeftUi();
 renderRightUi();
 syncSelectors();
 persistMetaIfChanged();
-requestAnimationFrame(frame);
+
+if (!scriptedDemo || scriptedRealtime) {
+  requestAnimationFrame(frame);
+}

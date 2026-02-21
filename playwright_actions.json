@@ -1,12 +1,12 @@
 {
   "steps": [
-    { "buttons": ["left_mouse_button"], "mouse_x": 683, "mouse_y": 354, "frames": 8 },
-    { "buttons": ["left_mouse_button"], "mouse_x": 683, "mouse_y": 554, "frames": 20 },
-    { "buttons": [], "mouse_x": 683, "mouse_y": 612, "frames": 260 },
-    { "buttons": [], "mouse_x": 320, "mouse_y": 612, "frames": 300 },
-    { "buttons": ["2"], "mouse_x": 320, "mouse_y": 612, "frames": 8 },
-    { "buttons": ["b", "o", "o", "s", "t", "Enter"], "mouse_x": 320, "mouse_y": 612, "frames": 18 },
-    { "buttons": ["left_mouse_button"], "mouse_x": 683, "mouse_y": 554, "frames": 20 },
-    { "buttons": [], "mouse_x": 700, "mouse_y": 612, "frames": 240 }
+    { "buttons": ["Space"], "mouse_x": 683, "mouse_y": 612, "frames": 18 },
+    { "buttons": ["Space", "Space", "Space", "Space"], "mouse_x": 683, "mouse_y": 612, "frames": 44 },
+    { "buttons": [], "mouse_x": 683, "mouse_y": 612, "frames": 240 },
+    { "buttons": ["ArrowLeft"], "mouse_x": 200, "mouse_y": 612, "frames": 230 },
+    { "buttons": ["b", "o", "o", "s", "t", "Enter"], "mouse_x": 200, "mouse_y": 612, "frames": 20 },
+    { "buttons": ["Space"], "mouse_x": 200, "mouse_y": 612, "frames": 60 },
+    { "buttons": ["2"], "mouse_x": 200, "mouse_y": 612, "frames": 10 },
+    { "buttons": [], "mouse_x": 760, "mouse_y": 612, "frames": 280 }
   ]
 }

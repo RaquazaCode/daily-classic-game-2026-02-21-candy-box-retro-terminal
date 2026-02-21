@@ -56,6 +56,8 @@ function makeInitialState(seed: number): GameState {
     recoveryMs: 0,
     blueSlowMs: 0,
     redBoostMs: 0,
+    commandBoostMs: 0,
+    syncShield: 0,
     bonusTarget: {
       active: false,
       x: CANVAS_WIDTH * 0.5,
@@ -185,6 +187,28 @@ function spawnBonusTarget(state: GameState, rng: RNG): void {
   });
 }
 
+function handleMissPenalty(state: GameState, reason: string, bonusType: BonusType): void {
+  if (state.syncShield > 0) {
+    state.syncShield -= 1;
+    pushEvent(state, {
+      type: "sync_shield_used",
+      tick: state.tick,
+      data: { reason, bonusType, shieldsLeft: state.syncShield }
+    });
+    return;
+  }
+
+  state.multiplier = BASE_MULTIPLIER;
+  state.streak = 0;
+  state.recoveryMs = MISS_RECOVERY_MS;
+  state.stats.misses += 1;
+  pushEvent(state, {
+    type: "bonus_miss_reset",
+    tick: state.tick,
+    data: { reason, bonusType }
+  });
+}
+
 function resolveCatch(state: GameState): void {
   const catcherLeft = state.catcherX - state.catcherWidth / 2;
   const catcherRight = state.catcherX + state.catcherWidth / 2;
@@ -227,17 +251,7 @@ function resolveCatch(state: GameState): void {
       });
     }
   } else {
-    state.multiplier = BASE_MULTIPLIER;
-    state.streak = 0;
-    state.recoveryMs = MISS_RECOVERY_MS;
-    state.stats.misses += 1;
-    pushEvent(state, {
-      type: "bonus_miss_reset",
-      tick: state.tick,
-      data: {
-        bonusType: target.type
-      }
-    });
+    handleMissPenalty(state, "missed_lane", target.type);
   }
 
   target.active = false;
@@ -287,7 +301,8 @@ function purchaseUpgrade(state: GameState, upgrade: UpgradeSpec): void {
 }
 
 function runManualCollect(state: GameState): void {
-  const gain = state.candiesPerClick * state.multiplier;
+  const clickBoost = state.commandBoostMs > 0 ? 2 : 1;
+  const gain = state.candiesPerClick * state.multiplier * clickBoost;
   state.candies += gain;
   const points = Math.round(gain * 10);
   state.score += points;
@@ -393,13 +408,84 @@ export class CandyBoxGame {
     }
     if (normalized === "arrowleft" || normalized === "a") {
       this.state.catcherX = clamp(this.state.catcherX - 28, 80, CANVAS_WIDTH - 80);
+      return;
     }
     if (normalized === "arrowright" || normalized === "d") {
       this.state.catcherX = clamp(this.state.catcherX + 28, 80, CANVAS_WIDTH - 80);
+      return;
     }
     if (normalized === " " || normalized === "space" || normalized === "spacebar") {
       runManualCollect(this.state);
+      return;
     }
+    if (/^[a-z]$/.test(normalized)) {
+      this.state.command.buffer = `${this.state.command.buffer}${normalized}`.slice(-14);
+      return;
+    }
+    if (normalized === "backspace") {
+      this.state.command.buffer = this.state.command.buffer.slice(0, -1);
+      return;
+    }
+    if (normalized === "enter") {
+      this.submitCommand();
+      return;
+    }
+  }
+
+  private submitCommand(): void {
+    const command = this.state.command.buffer.trim().toLowerCase();
+    this.state.command.lastSubmitted = command;
+    this.state.command.buffer = "";
+    this.state.command.feedbackMs = COMMAND_FEEDBACK_MS;
+    if (!command) {
+      this.state.command.lastResult = "error";
+      return;
+    }
+
+    const cooldown = this.state.command.cooldownMs as Record<string, number>;
+    if (cooldown[command] != null && cooldown[command] > 0) {
+      this.state.command.lastResult = "cooldown";
+      pushEvent(this.state, {
+        type: "command_cooldown",
+        tick: this.state.tick,
+        data: { cmd: command, remainingMs: Math.round(cooldown[command]) }
+      });
+      return;
+    }
+
+    if (command === "boost") {
+      this.state.commandBoostMs = 5000;
+      this.state.command.cooldownMs.boost = COMMAND_COOLDOWN_MS.boost;
+      this.state.command.used.boost += 1;
+      this.state.command.lastResult = "ok";
+    } else if (command === "sync") {
+      this.state.syncShield = Math.min(3, this.state.syncShield + 1);
+      this.state.recoveryMs = 0;
+      this.state.command.cooldownMs.sync = COMMAND_COOLDOWN_MS.sync;
+      this.state.command.used.sync += 1;
+      this.state.command.lastResult = "ok";
+    } else if (command === "dump") {
+      const payout = Math.max(0, Math.round((this.state.candies * 0.15 + this.state.heat * 40) * this.state.multiplier));
+      this.state.score += payout;
+      this.state.scoreBreakdown.command += payout;
+      this.state.command.cooldownMs.dump = COMMAND_COOLDOWN_MS.dump;
+      this.state.command.used.dump += 1;
+      this.state.command.lastResult = "ok";
+    } else {
+      this.state.command.lastResult = "error";
+      pushEvent(this.state, {
+        type: "command_error",
+        tick: this.state.tick,
+        data: { cmd: command }
+      });
+      return;
+    }
+
+    pushEvent(this.state, {
+      type: "command_success",
+      tick: this.state.tick,
+      data: { cmd: command }
+    });
   }
 
   update(dtMs: number): void {
@@ -420,6 +506,7 @@ export class CandyBoxGame {
     if (this.state.command.feedbackMs === 0) {
       this.state.command.lastResult = "none";
     }
+    this.state.commandBoostMs = Math.max(0, this.state.commandBoostMs - dtMs);
 
     if (!this.state.bonusTarget.active) {
       this.state.spawnCooldownMs -= dtMs;
@@ -443,21 +530,11 @@ export class CandyBoxGame {
       ) {
         resolveCatch(this.state);
       } else if (this.state.bonusTarget.y > CANVAS_HEIGHT + 20) {
-        this.state.multiplier = BASE_MULTIPLIER;
-        this.state.streak = 0;
-        this.state.recoveryMs = MISS_RECOVERY_MS;
         this.state.bonusTarget.active = false;
         this.state.spawnCooldownMs = BONUS_SPAWN_INTERVAL_MS;
         this.state.nextSpawnMs = BONUS_SPAWN_INTERVAL_MS;
         this.state.warningActive = false;
-        this.state.stats.misses += 1;
-        pushEvent(this.state, {
-          type: "bonus_miss_reset",
-          tick: this.state.tick,
-          data: {
-            reason: "fell_out"
-          }
-        });
+        handleMissPenalty(this.state, "fell_out", this.state.bonusTarget.type);
       }
     }
 
@@ -523,6 +600,8 @@ export class CandyBoxGame {
       recoveryMs: Math.round(this.state.recoveryMs),
       blueSlowMs: Math.round(this.state.blueSlowMs),
       redBoostMs: Math.round(this.state.redBoostMs),
+      commandBoostMs: Math.round(this.state.commandBoostMs),
+      syncShield: this.state.syncShield,
       warningActive: this.state.warningActive,
       timeLeftMs: Math.round(this.state.timeLeftMs),
       nextSpawnMs: Math.round(this.state.nextSpawnMs),

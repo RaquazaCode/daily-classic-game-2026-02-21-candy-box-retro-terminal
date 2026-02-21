@@ -37,6 +37,32 @@ function drawUpgradeCard(ctx: CanvasRenderingContext2D, state: GameState): void 
   }
 }
 
+function drawCommandPanel(ctx: CanvasRenderingContext2D, state: GameState): void {
+  const x = 30;
+  const y = 496;
+  const w = 230;
+  const h = 96;
+  drawPanel(ctx, x, y, w, h);
+  ctx.fillStyle = "#d8ffd6";
+  ctx.font = "14px monospace";
+  ctx.fillText("COMMAND", x + 10, y + 22);
+  const status =
+    state.command.lastResult === "ok"
+      ? "OK"
+      : state.command.lastResult === "cooldown"
+        ? "COOLDOWN"
+        : state.command.lastResult === "error"
+          ? "ERR"
+          : "--";
+  ctx.fillText(`LAST ${state.command.lastSubmitted || "--"} ${status}`, x + 10, y + 42);
+  ctx.fillText(`> ${(state.command.buffer || "").toUpperCase()}_`, x + 10, y + 62);
+  ctx.fillText(
+    `B ${Math.ceil(state.command.cooldownMs.boost / 1000)} S ${Math.ceil(state.command.cooldownMs.sync / 1000)} D ${Math.ceil(state.command.cooldownMs.dump / 1000)}`,
+    x + 10,
+    y + 82
+  );
+}
+
 export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): void {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   ctx.fillStyle = "#020905";
@@ -80,7 +106,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
   ctx.fillRect(state.catcherX - state.catcherWidth / 2, CATCHER_Y, state.catcherWidth, CATCHER_HEIGHT);
 
   if (state.bonusTarget.active) {
-    ctx.fillStyle = "#ffa63d";
+    ctx.fillStyle = state.bonusTarget.type === "blue" ? "#4dbdff" : state.bonusTarget.type === "red" ? "#ff5959" : "#ffa63d";
     ctx.beginPath();
     ctx.arc(state.bonusTarget.x, state.bonusTarget.y, 14, 0, Math.PI * 2);
     ctx.fill();
@@ -89,6 +115,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
   }
 
   drawUpgradeCard(ctx, state);
+  drawCommandPanel(ctx, state);
 
   ctx.font = "14px monospace";
   ctx.fillStyle = "#8be8a0";

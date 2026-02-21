@@ -86,6 +86,8 @@ export interface GameState {
   recoveryMs: number;
   blueSlowMs: number;
   redBoostMs: number;
+  commandBoostMs: number;
+  syncShield: number;
   bonusTarget: BonusTarget;
   catcherX: number;
   catcherWidth: number;

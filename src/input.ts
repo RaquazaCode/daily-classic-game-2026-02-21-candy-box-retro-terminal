@@ -48,7 +48,7 @@ export function wireInput(canvas: HTMLCanvasElement, game: CandyBoxGame): void {
   );
 
   window.addEventListener("keydown", (event) => {
-    if (event.key === " " || event.key === "ArrowLeft" || event.key === "ArrowRight") {
+    if (event.key === " " || event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Backspace") {
       event.preventDefault();
     }
     game.onKeyDown(event.key);

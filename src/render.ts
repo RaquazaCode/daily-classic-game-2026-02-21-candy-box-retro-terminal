@@ -1,10 +1,14 @@
-import { CANVAS_HEIGHT, CANVAS_WIDTH, CANDY_BUTTON, CATCHER_HEIGHT, CATCHER_Y, START_BUTTON, TITLE_TEXT, UPGRADE_BUTTONS } from "./constants";
-import type { GameState } from "./types";
+import { CANVAS_HEIGHT, CANVAS_WIDTH, CANDY_BUTTON, CATCHER_HEIGHT, CATCHER_Y, START_BUTTON, THEMES, TITLE_TEXT, UPGRADE_BUTTONS } from "./constants";
+import type { GameState, ThemeSpec } from "./types";
 
-function drawPanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
-  ctx.fillStyle = "#031207";
+function getTheme(themeId: GameState["theme"]): ThemeSpec {
+  return THEMES.find((theme) => theme.id === themeId) ?? THEMES[0];
+}
+
+function drawPanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, theme: ThemeSpec): void {
+  ctx.fillStyle = theme.panel;
   ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle = "#1eff6b";
+  ctx.strokeStyle = theme.accent;
   ctx.lineWidth = 2;
   ctx.strokeRect(x, y, w, h);
 }
@@ -27,7 +31,7 @@ function drawBar(
   ctx.strokeRect(x, y, w, h);
 }
 
-function drawUpgradeCard(ctx: CanvasRenderingContext2D, state: GameState): void {
+function drawUpgradeCard(ctx: CanvasRenderingContext2D, state: GameState, theme: ThemeSpec): void {
   ctx.font = "16px monospace";
   for (const upgrade of UPGRADE_BUTTONS) {
     const slot = state.upgrades.find((entry) => entry.id === upgrade.id);
@@ -35,9 +39,9 @@ function drawUpgradeCard(ctx: CanvasRenderingContext2D, state: GameState): void 
     const canAfford = state.candies >= upgrade.cost;
     ctx.fillStyle = purchased ? "#17391f" : canAfford ? "#0b1e12" : "#07150d";
     ctx.fillRect(upgrade.x, upgrade.y, upgrade.w, upgrade.h);
-    ctx.strokeStyle = purchased ? "#53ff9a" : canAfford ? "#1eff6b" : "#2b6a42";
+    ctx.strokeStyle = purchased ? theme.bright : canAfford ? theme.accent : "#2b6a42";
     ctx.strokeRect(upgrade.x, upgrade.y, upgrade.w, upgrade.h);
-    ctx.fillStyle = purchased ? "#53ff9a" : canAfford ? "#d8ffd6" : "#8bb79a";
+    ctx.fillStyle = purchased ? theme.bright : canAfford ? theme.dim : "#8bb79a";
     ctx.fillText(upgrade.label, upgrade.x + 12, upgrade.y + 28);
     ctx.fillText(purchased ? "PURCHASED" : `Cost ${upgrade.cost} candy`, upgrade.x + 12, upgrade.y + 54);
     if (!purchased) {
@@ -55,13 +59,13 @@ function drawUpgradeCard(ctx: CanvasRenderingContext2D, state: GameState): void 
   }
 }
 
-function drawCommandPanel(ctx: CanvasRenderingContext2D, state: GameState): void {
+function drawCommandPanel(ctx: CanvasRenderingContext2D, state: GameState, theme: ThemeSpec): void {
   const x = 30;
   const y = 496;
   const w = 230;
   const h = 96;
-  drawPanel(ctx, x, y, w, h);
-  ctx.fillStyle = "#d8ffd6";
+  drawPanel(ctx, x, y, w, h, theme);
+  ctx.fillStyle = theme.dim;
   ctx.font = "14px monospace";
   ctx.fillText("COMMAND", x + 10, y + 22);
   const status =
@@ -81,7 +85,7 @@ function drawCommandPanel(ctx: CanvasRenderingContext2D, state: GameState): void
   );
 }
 
-function drawBootSequence(ctx: CanvasRenderingContext2D, state: GameState): void {
+function drawBootSequence(ctx: CanvasRenderingContext2D, state: GameState, theme: ThemeSpec): void {
   const bootLines = [
     "MOUNTING_STORAGE ... OK",
     "INITIALIZING_CANDY_KERNEL ... OK",
@@ -89,8 +93,8 @@ function drawBootSequence(ctx: CanvasRenderingContext2D, state: GameState): void
     "READY"
   ];
   const visibleChars = Math.floor(state.bootTextMs / 28);
-  drawPanel(ctx, 180, 150, 600, 320);
-  ctx.fillStyle = "#c8ffd0";
+  drawPanel(ctx, 180, 150, 600, 320, theme);
+  ctx.fillStyle = theme.dim;
   ctx.font = "30px monospace";
   ctx.fillText("BOOTING CANDY OS v2.0", 220, 205);
   ctx.font = "18px monospace";
@@ -103,7 +107,7 @@ function drawBootSequence(ctx: CanvasRenderingContext2D, state: GameState): void
     }
     cursor += line.length + 4;
   }
-  ctx.fillStyle = "#8be8a0";
+  ctx.fillStyle = theme.bright;
   ctx.font = "20px monospace";
   ctx.fillText("Press ENTER or START RUN", 280, 430);
 }
@@ -127,6 +131,7 @@ function drawCrtOverlay(ctx: CanvasRenderingContext2D, state: GameState): void {
 }
 
 export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): void {
+  const theme = getTheme(state.theme);
   const shakeMagnitude = state.fx.shakeMs > 0 ? Math.min(5, 1 + state.fx.shakeMs / 40) : 0;
   const shakeX = shakeMagnitude > 0 ? Math.sin(state.elapsedMs * 0.3) * shakeMagnitude : 0;
   const shakeY = shakeMagnitude > 0 ? Math.cos(state.elapsedMs * 0.27) * shakeMagnitude : 0;
@@ -134,10 +139,10 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
   ctx.translate(shakeX, shakeY);
 
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-  ctx.fillStyle = "#020905";
+  ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  ctx.strokeStyle = "#0e4822";
+  ctx.strokeStyle = theme.grid;
   ctx.lineWidth = 1;
   for (let i = 0; i <= CANVAS_WIDTH; i += 24) {
     ctx.beginPath();
@@ -152,7 +157,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
     ctx.stroke();
   }
 
-  ctx.fillStyle = "#a8ffb0";
+  ctx.fillStyle = theme.dim;
   ctx.font = "24px monospace";
   ctx.shadowColor = "rgba(0, 255, 140, 0.45)";
   ctx.shadowBlur = 4;
@@ -160,7 +165,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
   ctx.shadowBlur = 0;
 
   ctx.font = "20px monospace";
-  ctx.fillStyle = "#d8ffd6";
+  ctx.fillStyle = theme.dim;
   ctx.fillText(`SCORE ${state.score}`, 30, 90);
   ctx.fillText(`CANDY ${state.candies.toFixed(1)}`, 30, 124);
   ctx.fillText(`CPS ${state.candiesPerSecond.toFixed(2)}`, 30, 158);
@@ -173,7 +178,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
 
   ctx.font = "14px monospace";
   ctx.fillText(`TIME ${Math.ceil(state.timeLeftMs / 1000)}s`, 300, 84);
-  drawBar(ctx, 300, 92, 240, 12, state.timeLeftMs / 120000, state.timeLeftMs < 30000 ? "#ff5555" : "#1eff6b");
+  drawBar(ctx, 300, 92, 240, 12, state.timeLeftMs / 120000, state.timeLeftMs < 30000 ? theme.alert : theme.accent);
   ctx.fillText(`BONUS ETA ${(state.nextSpawnMs / 1000).toFixed(1)}s`, 300, 120);
   drawBar(
     ctx,
@@ -182,24 +187,24 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
     240,
     12,
     (3000 - Math.min(3000, state.nextSpawnMs)) / 3000,
-    state.warningActive ? "#ff9955" : "#32ffaa"
+    state.warningActive ? theme.alert : theme.accent
   );
   ctx.fillText(`SYNC SHIELD ${state.syncShield}`, 300, 154);
   drawBar(ctx, 300, 162, 240, 10, state.streak / 5, "#7aff9f");
   drawBar(ctx, 300, 178, 240, 10, state.heat, "#48d0ff");
 
-  drawPanel(ctx, CANDY_BUTTON.x, CANDY_BUTTON.y, CANDY_BUTTON.w, CANDY_BUTTON.h);
-  ctx.fillStyle = "#1eff6b";
+  drawPanel(ctx, CANDY_BUTTON.x, CANDY_BUTTON.y, CANDY_BUTTON.w, CANDY_BUTTON.h, theme);
+  ctx.fillStyle = theme.accent;
   ctx.fillRect(CANDY_BUTTON.x + 120, CANDY_BUTTON.y + 26, 160, 88);
   ctx.fillStyle = "#02120a";
   ctx.font = "26px monospace";
   ctx.fillText("COLLECT", CANDY_BUTTON.x + 132, CANDY_BUTTON.y + 78);
 
-  ctx.fillStyle = "#1eff6b";
+  ctx.fillStyle = theme.accent;
   ctx.fillRect(state.catcherX - state.catcherWidth / 2, CATCHER_Y, state.catcherWidth, CATCHER_HEIGHT);
 
   if (state.bonusTarget.active) {
-    ctx.fillStyle = state.bonusTarget.type === "blue" ? "#4dbdff" : state.bonusTarget.type === "red" ? "#ff5959" : "#ffa63d";
+    ctx.fillStyle = state.bonusTarget.type === "blue" ? "#4dbdff" : state.bonusTarget.type === "red" ? theme.alert : "#ffa63d";
     ctx.beginPath();
     ctx.arc(state.bonusTarget.x, state.bonusTarget.y, 14, 0, Math.PI * 2);
     ctx.fill();
@@ -222,18 +227,18 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
     }
   }
 
-  drawUpgradeCard(ctx, state);
-  drawCommandPanel(ctx, state);
+  drawUpgradeCard(ctx, state, theme);
+  drawCommandPanel(ctx, state, theme);
 
   ctx.font = "14px monospace";
-  ctx.fillStyle = "#8be8a0";
+  ctx.fillStyle = theme.dim;
   ctx.fillText(state.tutorialHint, 30, 610);
   ctx.fillText("P pause/resume | R reset run | ENTER submit command", 520, 610);
 
   if (state.mode === "title") {
-    drawBootSequence(ctx, state);
-    drawPanel(ctx, START_BUTTON.x, START_BUTTON.y, START_BUTTON.w, START_BUTTON.h);
-    ctx.fillStyle = "#c8ffd0";
+    drawBootSequence(ctx, state, theme);
+    drawPanel(ctx, START_BUTTON.x, START_BUTTON.y, START_BUTTON.w, START_BUTTON.h, theme);
+    ctx.fillStyle = theme.dim;
     ctx.font = "30px monospace";
     ctx.fillText("START RUN", START_BUTTON.x + 74, START_BUTTON.y + 47);
   } else if (state.mode === "paused") {

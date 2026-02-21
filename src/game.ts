@@ -412,6 +412,19 @@ export class CandyBoxGame {
     if (normalized === "r") {
       this.reset();
     }
+    if (normalized === "1" || normalized === "2" || normalized === "3") {
+      const index = Number(normalized) - 1;
+      const theme = THEMES[index];
+      if (theme) {
+        this.state.theme = theme.id;
+        pushEvent(this.state, {
+          type: "theme_change",
+          tick: this.state.tick,
+          data: { theme: theme.id }
+        });
+      }
+      return;
+    }
     if (this.state.mode !== "playing") {
       return;
     }

@@ -20,6 +20,7 @@ export const BONUS_FALL_SPEED = 140;
 export const BONUS_HEAT_SPEEDUP = 0.4;
 
 export const BASE_CATCHER_WIDTH = 140;
+export const CATCHER_WIDTH = BASE_CATCHER_WIDTH;
 export const CATCHER_HEIGHT = 16;
 export const CATCHER_Y = 548;
 

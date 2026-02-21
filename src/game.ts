@@ -397,6 +397,10 @@ export class CandyBoxGame {
 
   onKeyDown(key: string): void {
     const normalized = key.toLowerCase();
+    if (this.state.mode === "title" && (normalized === "enter" || normalized === " ")) {
+      this.start();
+      return;
+    }
     if (normalized === "p") {
       this.togglePause();
     }
@@ -489,6 +493,11 @@ export class CandyBoxGame {
   }
 
   update(dtMs: number): void {
+    if (this.state.mode === "title") {
+      this.state.tick += 1;
+      this.state.bootTextMs += dtMs;
+      return;
+    }
     if (this.state.mode !== "playing") {
       return;
     }
@@ -498,6 +507,13 @@ export class CandyBoxGame {
     this.state.elapsedMs += dtMs;
     this.state.timeLeftMs = Math.max(0, RUN_DURATION_MS - this.state.elapsedMs);
     this.state.phase = phaseForElapsed(this.state.elapsedMs);
+    if (this.state.elapsedMs < 10000) {
+      this.state.tutorialHint = "Arrow keys or mouse move catcher. SPACE/CLICK to collect.";
+    } else if (this.state.elapsedMs < 30000) {
+      this.state.tutorialHint = "Catch falling bonuses to build streak. Miss resets multiplier.";
+    } else {
+      this.state.tutorialHint = "Buy upgrades and type BOOST / SYNC / DUMP in command panel.";
+    }
 
     for (const key of Object.keys(this.state.command.cooldownMs) as Array<keyof typeof COMMAND_COOLDOWN_MS>) {
       this.state.command.cooldownMs[key] = Math.max(0, this.state.command.cooldownMs[key] - dtMs);

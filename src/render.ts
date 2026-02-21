@@ -63,6 +63,33 @@ function drawCommandPanel(ctx: CanvasRenderingContext2D, state: GameState): void
   );
 }
 
+function drawBootSequence(ctx: CanvasRenderingContext2D, state: GameState): void {
+  const bootLines = [
+    "MOUNTING_STORAGE ... OK",
+    "INITIALIZING_CANDY_KERNEL ... OK",
+    "SYNCING_CATCHER_DRIVERS ... OK",
+    "READY"
+  ];
+  const visibleChars = Math.floor(state.bootTextMs / 28);
+  drawPanel(ctx, 180, 150, 600, 320);
+  ctx.fillStyle = "#c8ffd0";
+  ctx.font = "30px monospace";
+  ctx.fillText("BOOTING CANDY OS v2.0", 220, 205);
+  ctx.font = "18px monospace";
+  let cursor = 0;
+  for (let i = 0; i < bootLines.length; i += 1) {
+    const line = bootLines[i];
+    const shown = Math.max(0, Math.min(line.length, visibleChars - cursor));
+    if (shown > 0) {
+      ctx.fillText(line.slice(0, shown), 220, 250 + i * 34);
+    }
+    cursor += line.length + 4;
+  }
+  ctx.fillStyle = "#8be8a0";
+  ctx.font = "20px monospace";
+  ctx.fillText("Press ENTER or START RUN", 280, 430);
+}
+
 export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): void {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   ctx.fillStyle = "#020905";
@@ -119,10 +146,11 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
 
   ctx.font = "14px monospace";
   ctx.fillStyle = "#8be8a0";
-  ctx.fillText("Move mouse to align catcher. Click COLLECT for manual candy.", 30, 610);
-  ctx.fillText("P pause/resume | R reset run", 600, 610);
+  ctx.fillText(state.tutorialHint, 30, 610);
+  ctx.fillText("P pause/resume | R reset run | ENTER submit command", 520, 610);
 
   if (state.mode === "title") {
+    drawBootSequence(ctx, state);
     drawPanel(ctx, START_BUTTON.x, START_BUTTON.y, START_BUTTON.w, START_BUTTON.h);
     ctx.fillStyle = "#c8ffd0";
     ctx.font = "30px monospace";

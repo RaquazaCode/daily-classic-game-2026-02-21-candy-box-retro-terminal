@@ -2,6 +2,12 @@
   color: #c8ffd0;
   background-color: #010a04;
   font-family: "VT323", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --dock-open: 320px;
+  --dock-collapsed: 52px;
+  --panel-bg: rgba(2, 22, 11, 0.9);
+  --panel-border: #18ff74;
+  --panel-text: #cfffe2;
+  --panel-dim: #8ce0ae;
 }
 
 * {
@@ -13,24 +19,223 @@ body {
   margin: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at top, #082312 0%, #010804 60%, #000000 100%);
 }
 
 body {
-  display: grid;
-  place-items: center;
-  overflow: hidden;
   background-image:
     radial-gradient(circle at 20% 15%, rgba(0, 255, 110, 0.08), transparent 45%),
     radial-gradient(circle at 80% 85%, rgba(0, 200, 255, 0.06), transparent 50%),
     radial-gradient(circle at center, #082312 0%, #010804 55%, #000000 100%);
+  color: var(--panel-text);
+}
+
+#app-shell {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: var(--dock-collapsed) 1fr var(--dock-collapsed);
+  gap: 12px;
+  padding: 12px;
+  align-items: center;
+}
+
+#app-shell.has-left-open {
+  grid-template-columns: var(--dock-open) 1fr var(--dock-collapsed);
+}
+
+#app-shell.has-right-open {
+  grid-template-columns: var(--dock-collapsed) 1fr var(--dock-open);
+}
+
+#app-shell.has-left-open.has-right-open {
+  grid-template-columns: var(--dock-open) 1fr var(--dock-open);
+}
+
+.dock {
+  height: min(95vh, 820px);
+  border: 2px solid var(--panel-border);
+  background: var(--panel-bg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 22px rgba(24, 255, 116, 0.22);
+}
+
+.dock-toggle {
+  width: 100%;
+  border: 0;
+  border-bottom: 2px solid var(--panel-border);
+  background: rgba(13, 44, 25, 0.95);
+  color: var(--panel-text);
+  font: inherit;
+  font-size: 24px;
+  letter-spacing: 1px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.dock-inner {
+  padding: 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dock.dock-collapsed .dock-inner {
+  opacity: 0;
+  pointer-events: none;
+}
+
+h2,
+h3 {
+  margin: 0;
+  font-weight: 400;
+  letter-spacing: 0.6px;
+}
+
+h2 {
+  font-size: 30px;
+}
+
+h3 {
+  font-size: 24px;
+}
+
+.panel-block {
+  border: 1px solid #137142;
+  background: rgba(5, 30, 16, 0.7);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-row,
+.command-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.command-row {
+  grid-template-columns: 1fr auto;
+}
+
+button,
+select,
+input {
+  font: inherit;
+  font-size: 22px;
+  color: var(--panel-text);
+  background: rgba(5, 28, 15, 0.85);
+  border: 1px solid #1eff6b;
+  padding: 6px 8px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.meta-line {
+  color: var(--panel-dim);
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.stack-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stack-list button {
+  text-align: left;
+  line-height: 1.1;
+}
+
+#stage-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+#stage-toolbar {
+  width: min(960px, 96vw);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 2px solid var(--panel-border);
+  background: rgba(2, 22, 11, 0.75);
+}
+
+#stage-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+}
+
+.toolbar-hint {
+  font-size: 20px;
+  color: var(--panel-dim);
 }
 
 canvas {
-  width: min(95vw, 960px);
+  width: min(960px, calc(100vw - 120px));
   height: auto;
-  border: 2px solid #1eff6b;
+  max-height: 82vh;
+  border: 2px solid var(--panel-border);
   box-shadow: 0 0 24px rgba(30, 255, 107, 0.3);
   image-rendering: pixelated;
   filter: contrast(1.18) brightness(1.08);
+  background: #010a04;
+}
+
+@media (max-width: 1400px) {
+  #app-shell,
+  #app-shell.has-left-open,
+  #app-shell.has-right-open,
+  #app-shell.has-left-open.has-right-open {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    align-items: start;
+    gap: 10px;
+  }
+
+  .dock {
+    width: 100%;
+    height: auto;
+    max-height: 48px;
+  }
+
+  .dock:not(.dock-collapsed) {
+    max-height: 48vh;
+  }
+
+  #stage-column {
+    order: 2;
+  }
+
+  #left-panel {
+    order: 1;
+  }
+
+  #right-panel {
+    order: 3;
+  }
+
+  canvas {
+    width: min(960px, 96vw);
+    max-height: none;
+  }
 }

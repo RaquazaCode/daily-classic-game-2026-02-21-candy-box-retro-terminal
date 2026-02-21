@@ -9,6 +9,24 @@ function drawPanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.strokeRect(x, y, w, h);
 }
 
+function drawBar(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  ratio: number,
+  fill: string,
+  track = "#062413"
+): void {
+  ctx.fillStyle = track;
+  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = fill;
+  ctx.fillRect(x, y, Math.max(0, Math.min(1, ratio)) * w, h);
+  ctx.strokeStyle = "#1eff6b";
+  ctx.strokeRect(x, y, w, h);
+}
+
 function drawUpgradeCard(ctx: CanvasRenderingContext2D, state: GameState): void {
   ctx.font = "16px monospace";
   for (const upgrade of UPGRADE_BUTTONS) {
@@ -122,6 +140,27 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
   ctx.fillText(`CPC ${state.candiesPerClick.toFixed(2)}`, 30, 192);
   ctx.fillText(`MULTI x${state.multiplier.toFixed(2)}`, 30, 226);
 
+  ctx.font = "16px monospace";
+  ctx.fillText(`PHASE ${state.phase.toUpperCase()}`, 30, 252);
+  ctx.fillText(`STREAK ${state.streak.toFixed(1)} | HEAT ${(state.heat * 100).toFixed(0)}%`, 30, 274);
+
+  ctx.font = "14px monospace";
+  ctx.fillText(`TIME ${Math.ceil(state.timeLeftMs / 1000)}s`, 300, 84);
+  drawBar(ctx, 300, 92, 240, 12, state.timeLeftMs / 120000, state.timeLeftMs < 30000 ? "#ff5555" : "#1eff6b");
+  ctx.fillText(`BONUS ETA ${(state.nextSpawnMs / 1000).toFixed(1)}s`, 300, 120);
+  drawBar(
+    ctx,
+    300,
+    128,
+    240,
+    12,
+    (3000 - Math.min(3000, state.nextSpawnMs)) / 3000,
+    state.warningActive ? "#ff9955" : "#32ffaa"
+  );
+  ctx.fillText(`SYNC SHIELD ${state.syncShield}`, 300, 154);
+  drawBar(ctx, 300, 162, 240, 10, state.streak / 5, "#7aff9f");
+  drawBar(ctx, 300, 178, 240, 10, state.heat, "#48d0ff");
+
   drawPanel(ctx, CANDY_BUTTON.x, CANDY_BUTTON.y, CANDY_BUTTON.w, CANDY_BUTTON.h);
   ctx.fillStyle = "#1eff6b";
   ctx.fillRect(CANDY_BUTTON.x + 120, CANDY_BUTTON.y + 26, 160, 88);
@@ -169,5 +208,12 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState): voi
     ctx.fillText("SESSION COMPLETE", 295, 310);
     ctx.font = "22px monospace";
     ctx.fillText("Press R to restart", 370, 350);
+  }
+
+  if (state.timeLeftMs <= 30000 && state.mode === "playing") {
+    const pulse = 0.2 + (Math.sin(state.elapsedMs * 0.02) * 0.5 + 0.5) * 0.25;
+    ctx.fillStyle = `rgba(255, 80, 80, ${pulse.toFixed(3)})`;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, 8);
+    ctx.fillRect(0, CANVAS_HEIGHT - 8, CANVAS_WIDTH, 8);
   }
 }
